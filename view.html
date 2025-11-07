@@ -3,73 +3,78 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Upload Files</title>
+<title>View Files</title>
 <style>
 body { background:#0d1117; color:#e6edf3; font-family:'Segoe UI', sans-serif; text-align:center; padding:2rem; }
 .nav a { color:#79c0ff; margin:0 10px; text-decoration:none; font-weight:bold; }
 .nav a:hover { text-decoration:underline; }
-.card { background:#161b22; margin: 2rem; padding:2rem; border-radius:12px; display:inline-block; box-shadow:0 0 20px rgba(0,0,0,0.4); opacity:0; transform:translateY(30px); animation:fadeIn 1s forwards;}
+.card { background:#161b22; padding:2rem; border-radius:12px; display:inline-block; box-shadow:0 0 20px rgba(0,0,0,0.4); opacity:0; transform:translateY(30px); animation:fadeIn 1s forwards; }
 input[type="text"] { width:90%; padding:0.7rem; margin:0.5rem; border:none; border-radius:8px; background:#0d1117; color:#e6edf3; }
 button { background:#238636; color:#fff; border:none; padding:0.7rem 1.2rem; margin:0.5rem; border-radius:8px; font-weight:bold; cursor:pointer; }
 button:hover { background:#2ea043; }
-#drop-area { border:2px dashed #79c0ff; padding:2rem; border-radius:12px; margin:1rem 0; transition:0.3s; }
-#drop-area.hover { background:#23863633; }
+#gallery { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px,1fr)); gap:16px; max-width:900px; margin:auto; }
+.file-box { background:#161b22; border-radius:10px; padding:10px; }
+.file-box img { width:100%; border-radius:8px; }
+.file-link { color:#79c0ff; text-decoration:none; display:block; margin-top:8px; font-weight:bold; }
+.icon { font-size:50px; margin:10px; }
 #status { margin-top:1rem; color:#79c0ff; }
 @keyframes fadeIn { to { opacity:1; transform:translateY(0); } }
 </style>
 </head>
 <body>
 <div class="nav">
-  <a href="index.html">Главная</a> |
-  <a href="upload.html">Загрузить</a> |
-  <a href="view.html">Просмотр файлов</a>
+    <a href="index.html">Главная</a> |
+    <a href="upload.html">Загрузить</a> |
+    <a href="view.html">Просмотр файлов</a>
 </div>
 
 <div class="card">
-  <h2>Upload File</h2>
+  <h2>View Files</h2>
   <input type="text" id="dateInput" placeholder="Date (e.g. 2025-11-07)">
   <input type="text" id="subjectInput" placeholder="Subject">
-
-  <div id="drop-area">
-    <p>Перетащите файлы сюда или выберите</p>
-    <input type="file" id="fileInput" style="display:none">
-    <button id="selectBtn">Выбрать файл</button>
-  </div>
-
-  <button id="uploadBtn">Upload</button>
+  <button id="loadBtn">Load Files</button>
   <div id="status"></div>
 </div>
 
+<div id="gallery"></div>
+
 <script>
 const API = 'http://127.0.0.1:5000';
-const dropArea = document.getElementById('drop-area');
-const fileInput = document.getElementById('fileInput');
-const selectBtn = document.getElementById('selectBtn');
-let selectedFile = null;
 
-selectBtn.onclick = () => fileInput.click();
-fileInput.onchange = () => selectedFile = fileInput.files[0];
+function getFileIcon(name) {
+  const ext = name.split('.').pop().toLowerCase();
+  if(ext==='pdf') return '📕';
+  if(['doc','docx'].includes(ext)) return '📘';
+  if(['ppt','pptx'].includes(ext)) return '📙';
+  if(['xls','xlsx'].includes(ext)) return '📗';
+  if(ext==='txt') return '📄';
+  return '📁';
+}
 
-dropArea.addEventListener('dragover', e => { e.preventDefault(); dropArea.classList.add('hover'); });
-dropArea.addEventListener('dragleave', () => dropArea.classList.remove('hover'));
-dropArea.addEventListener('drop', e => { e.preventDefault(); dropArea.classList.remove('hover'); selectedFile = e.dataTransfer.files[0]; });
-
-document.getElementById('uploadBtn').onclick = async () => {
+document.getElementById('loadBtn').onclick = async () => {
   const date = document.getElementById('dateInput').value.trim();
   const subject = document.getElementById('subjectInput').value.trim();
+  const gallery = document.getElementById('gallery');
   const status = document.getElementById('status');
 
-  if (!selectedFile || !date || !subject) { status.textContent = 'Заполните все поля и выберите файл.'; return; }
-
-  const formData = new FormData();
-  formData.append('to_upload', selectedFile);
-  formData.append('json', JSON.stringify({ date, subject }));
+  if(!date || !subject){ status.textContent='Заполните все поля.'; return; }
 
   status.textContent = 'Загрузка...';
   try {
-    const res = await fetch(`${API}/upload`, { method:'POST', body: formData });
-    status.textContent = await res.text();
-  } catch (e) { status.textContent = 'Ошибка: ' + e; }
+    const res = await fetch(`${API}/get`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({date, subject})
+    });
+    const files = await res.json();
+    if(files.length===0){ gallery.innerHTML='<p>Файлы не найдены.</p>'; status.textContent=''; return; }
+
+    gallery.innerHTML = files.map(f => {
+      if(f.type==='image') return `<div class="file-box"><img src="${API}${f.url}" alt=""><a class="file-link" href="${API}${f.url}" download>Download</a></div>`;
+      else return `<div class="file-box"><div class="icon">${getFileIcon(f.name)}</div><a class="file-link" href="${API}${f.url}" download>${f.name}</a></div>`;
+    }).join('');
+    status.textContent='';
+  } catch(e){ status.textContent='Ошибка: '+e; }
 };
 </script>
 </body>
