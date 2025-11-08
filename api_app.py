@@ -32,7 +32,7 @@ def mkdir():
     data = flask.request.get_json()
     path = data.get("path")
     name = data.get("name")
-    if not path or not name: return "missing",400
+    if (not path and path != "") or not name: return "missing",400
     folder_path = os.path.join(UPLOAD_DIR, path, name)
     os.makedirs(folder_path, exist_ok=False)
     return "created",200
