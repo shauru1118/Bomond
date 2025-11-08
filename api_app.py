@@ -40,7 +40,7 @@ def mkdir():
 @app.route("/upload_to_folder", methods=["POST"])
 def upload_to_folder():
     folder = flask.request.form.get("folder")
-    if "to_upload" not in flask.request.files or not folder: return "missing",400
+    if "to_upload" not in flask.request.files or (not folder and folder != ""): return "missing",400
     file = flask.request.files["to_upload"]
     os.makedirs(os.path.join(UPLOAD_DIR, folder), exist_ok=True)
     file.save(os.path.join(UPLOAD_DIR, folder, file.filename))
