@@ -5,37 +5,57 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Структура сервера</title>
 <style>
-body {background:#0d1117; color:#e6edf3; font-family:'Segoe UI', sans-serif; padding:2rem;}
+body {
+    background:#0d1117;
+    color:#e6edf3;
+    font-family:'Segoe UI', sans-serif;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:2rem;
+    text-align:center;
+    margin:0;
+}
 .nav a {color:#79c0ff; margin:0 10px; text-decoration:none; font-weight:bold;}
 .nav a:hover{text-decoration:underline;}
-.card{background:#161b22; padding:1.5rem; border-radius:12px; box-shadow:0 0 20px rgba(0,0,0,0.4); opacity:0; transform:translateY(30px); animation:fadeIn 1s forwards; max-width:900px; margin:2rem;}
-#tree{margin-top:1rem; font-family:monospace; line-height:1.6;}
-ul{list-style:none; margin:0; padding-left:1rem; border-left:1px dashed #30363d;}
-li{margin:0.2rem 0;}
+.card {
+    background:#161b22;
+    padding:2rem;
+    border-radius:12px;
+    box-shadow:0 0 20px rgba(0,0,0,0.4);
+    max-width:900px;
+    width:100%;
+    margin-top:2rem;
+}
+h2 {margin-bottom:1rem;}
+#breadcrumb {margin-bottom:1rem; font-size:0.9rem; color:#8b949e;}
+#breadcrumb span{cursor:pointer; color:#79c0ff;}
+#breadcrumb span:hover{text-decoration:underline;}
+ul{list-style:none; margin:0; padding-left:1rem; border-left:1px dashed #30363d; overflow:hidden; transition:max-height 0.3s ease, opacity 0.3s ease; opacity:1; max-height:1000px;}
+ul.collapsed{opacity:0; max-height:0;}
+li{margin:0.2rem 0; opacity:0; transform:translateY(-10px); animation:fadeInUp 0.3s forwards;}
+@keyframes fadeInUp{to{opacity:1; transform:translateY(0);}}
 .folder{font-weight:bold; cursor:pointer; color:#79c0ff;}
 .file a{color:#c9d1d9; text-decoration:none;}
 .file a:hover{text-decoration:underline;}
 button.icon{margin-left:5px; padding:0 5px; font-size:1rem; cursor:pointer; border-radius:4px; border:none; background:#238636; color:white;}
 button.icon:hover{background:#2ea043;}
-@keyframes fadeIn{to{opacity:1; transform:translateY(0);}}
+.back-btn{margin-left:10px; padding:0.2rem 0.5rem; background:#586069; color:white; border:none; border-radius:4px; cursor:pointer;}
+.back-btn:hover{background:#444c56;}
 </style>
 </head>
 <body>
 
 <div class="nav">
   <a href="index.html">Главная</a> |
-  <a href="upload.html">Загрузить</a> |
   <a href="view.html">Просмотр файлов</a> |
   <a href="tree.html">Структура сервера</a>
 </div>
 
 <div class="card">
-  <h2>Файлы сервера</h2>
+  <h2>Структура файлов на сервере</h2>
+  <div id="breadcrumb"></div>
   <div id="tree">Загрузка...</div>
-  <div style="margin-top:1rem;">
-      <button class="icon" onclick="addFolder('',event)">📂+ Создать папку</button>
-      <button class="icon" onclick="addFile('',event)">📎 Добавить файл</button>
-  </div>
 </div>
 
 <input type="file" id="fileInput" style="display:none">
@@ -43,85 +63,172 @@ button.icon:hover{background:#2ea043;}
 <script>
 const API = 'https://bomond.pythonanywhere.com';
 const fileInput = document.getElementById('fileInput');
+let currentPath = '';
 
-async function loadTree(){
-    const treeDiv = document.getElementById('tree');
+// Загрузка дерева
+async function loadTree(path=''){
+    currentPath = path;
+    renderBreadcrumb();
     try{
         const res = await fetch(`${API}/tree`);
         const data = await res.json();
-        // Сразу отображаем содержимое папки upload
-        const root = data; // верхний уровень — upload
-        treeDiv.innerHTML = renderTree(root,'');
-    }catch(e){treeDiv.textContent='Ошибка: '+e;}
-}
-
-// Рекурсивная отрисовка дерева
-function renderTree(node,path){
-    if(!node.children || node.children.length===0) return '';
-    let html='<ul>';
-    for(const child of node.children){
-        const childPath = path ? path+'/'+child.name : child.name;
-        if(child.type==='folder'){
-            html+=`<li>
-                <span class="folder" onclick="toggle(this)">📁 ${child.name}</span>
-                <button class="icon" title="Добавить файл" onclick="addFile('${childPath}',event)">📎</button>
-                <button class="icon" title="Новая папка" onclick="addFolder('${childPath}',event)">📂+</button>
-                <button class="icon" title="Удалить" onclick="deleteItem('${childPath}',event)">🗑️</button>
-                ${renderTree(child,childPath)}
-            </li>`;
-        }else{
-            const url=`${API}/files/${childPath}`;
-            html+=`<li class="file">📄 <a href="${url}" download>${child.name}</a>
-            <button class="icon" title="Удалить" onclick="deleteItem('${childPath}',event)">🗑️</button></li>`;
+        let node = data;
+        if(currentPath){
+            currentPath.split('/').forEach(p=>{
+                if(!node.children) return;
+                node = node.children.find(c=>c.type==='folder' && c.name===p);
+            });
         }
+        renderNode(node, document.getElementById('tree'));
+    }catch(e){document.getElementById('tree').textContent='Ошибка: '+e;}
+}
+
+// Breadcrumb и кнопка "Назад"
+function renderBreadcrumb(){
+    const bcDiv = document.getElementById('breadcrumb');
+    let html = `<span onclick="loadTree()">Корень</span>`;
+    if(currentPath){
+        const parts = currentPath.split('/');
+        html += ' / ' + parts.map((p,i)=>{
+            const acc = parts.slice(0,i+1).join('/');
+            return `<span onclick="loadTree('${acc}')">${p}</span>`;
+        }).join(' / ');
     }
-    html+='</ul>';
-    return html;
+    bcDiv.innerHTML = html;
+
+    if(currentPath){
+        const backBtn = document.createElement('button');
+        backBtn.className='back-btn';
+        backBtn.textContent='Назад';
+        backBtn.onclick = ()=>{
+            if(!currentPath.includes('/')) loadTree('');
+            else loadTree(currentPath.split('/').slice(0,-1).join('/'));
+        };
+        bcDiv.appendChild(backBtn);
+    }
 }
 
-function toggle(el){
-    const next=el.nextElementSibling;
-    if(next && next.tagName==='UL') next.style.display = next.style.display==='none'?'block':'none';
+// Рендер папок и файлов
+function renderNode(node, container){
+    container.innerHTML='';
+    if(!node || !node.children) return;
+    const ul = document.createElement('ul');
+    node.children.forEach(c=>{
+        const childPath = currentPath ? currentPath+'/'+c.name : c.name;
+        const li = document.createElement('li');
+
+        if(c.type==='folder'){
+            const span = document.createElement('span');
+            span.className='folder';
+            span.textContent='📁 '+c.name;
+            span.onclick=()=>{
+                if(li.querySelector('ul')){
+                    li.querySelector('ul').classList.toggle('collapsed');
+                }else{
+                    fetch(`${API}/tree`).then(r=>r.json()).then(data=>{
+                        let subNode = data;
+                        childPath.split('/').forEach(p=>{
+                            if(!subNode.children) return;
+                            subNode = subNode.children.find(x=>x.type==='folder' && x.name===p);
+                        });
+                        if(subNode) renderNode(subNode, li.appendChild(document.createElement('div')));
+                        const innerUl = li.querySelector('div').firstChild;
+                        if(innerUl) li.replaceChild(innerUl, li.querySelector('div'));
+                    });
+                }
+            };
+            li.appendChild(span);
+
+            // кнопка добавления файла
+            const addFileBtn = document.createElement('button');
+            addFileBtn.className='icon';
+            addFileBtn.textContent='📎';
+            addFileBtn.title='Добавить файл';
+            addFileBtn.onclick = (e)=>{
+                e.stopPropagation();
+                addFile(childPath);
+            };
+            li.appendChild(addFileBtn);
+
+            // кнопка добавления папки
+            const addFolderBtn = document.createElement('button');
+            addFolderBtn.className='icon';
+            addFolderBtn.textContent='📂+';
+            addFolderBtn.title='Новая папка';
+            addFolderBtn.onclick = (e)=>{
+                e.stopPropagation();
+                addFolder(childPath);
+            };
+            li.appendChild(addFolderBtn);
+
+            // кнопка удаления папки
+            const delBtn = document.createElement('button');
+            delBtn.className='icon';
+            delBtn.textContent='🗑️';
+            delBtn.title='Удалить';
+            delBtn.onclick = (e)=>{
+                e.stopPropagation();
+                deleteItem(childPath);
+            };
+            li.appendChild(delBtn);
+
+        }else{
+            const a = document.createElement('a');
+            a.href=`${API}/files/${childPath}`;
+            a.download=c.name;
+            a.className='file';
+            a.textContent='📄 '+c.name;
+            li.appendChild(a);
+
+            const delBtn = document.createElement('button');
+            delBtn.className='icon';
+            delBtn.textContent='🗑️';
+            delBtn.title='Удалить';
+            delBtn.onclick = (e)=>{e.stopPropagation(); deleteItem(childPath);};
+            li.appendChild(delBtn);
+        }
+
+        ul.appendChild(li);
+    });
+    container.appendChild(ul);
 }
 
-function addFolder(folderPath,event){
-    event.stopPropagation();
+// Добавление папки
+function addFolder(path){
     const name = prompt("Введите имя новой папки:");
     if(!name) return;
-    const pathToSend = folderPath || ''; // пустой путь = верхний уровень
     fetch(`${API}/mkdir`,{
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({path:pathToSend,name})
-    }).then(r=>{
-        if(r.ok) loadTree(); else alert(`Ошибка создания папки ${r.body}`);
-    });
+        body: JSON.stringify({path:name ? path : '', name})
+    }).then(r=>{if(r.ok) loadTree(currentPath); else alert("Ошибка создания папки");});
 }
 
-function addFile(folderPath,event){
-    event.stopPropagation();
-    fileInput.onchange=async ()=>{
-        const file=fileInput.files[0];
+// Добавление файла
+function addFile(path){
+    fileInput.onchange = async ()=>{
+        const file = fileInput.files[0];
         if(!file) return;
-        const formData=new FormData();
+        const formData = new FormData();
         formData.append('to_upload',file);
-        formData.append('folder',folderPath);
-        const res=await fetch(`${API}/upload_to_folder`,{method:'POST',body:formData});
-        if(res.ok) loadTree(); else alert("Ошибка загрузки файла");
+        formData.append('folder',path);
+        const res = await fetch(`${API}/upload_to_folder`,{method:'POST',body:formData});
+        if(res.ok) loadTree(currentPath); else alert("Ошибка загрузки файла");
     };
     fileInput.click();
 }
 
-function deleteItem(path,event){
-    event.stopPropagation();
+// Удаление элемента
+function deleteItem(path){
     if(!confirm("Вы уверены, что хотите удалить?")) return;
     fetch(`${API}/delete`,{
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify({path})
-    }).then(r=>{if(r.ok) loadTree(); else alert("Ошибка удаления");});
+    }).then(r=>{if(r.ok) loadTree(currentPath); else alert("Ошибка удаления");});
 }
 
+// Стартовая загрузка
 loadTree();
 </script>
 </body>

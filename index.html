@@ -5,30 +5,41 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Бомондъ.рф</title>
 <style>
-body { margin:0; padding:2rem; font-family:'Segoe UI', sans-serif; background:#0d1117; color:#e6edf3; text-align:center;}
-.nav a { color:#79c0ff; margin:0 10px; text-decoration:none; font-weight:bold; transition:0.3s;}
-.nav a:hover { text-decoration:underline;}
-main { display:flex; flex-direction:column; justify-content:center; align-items:center; margin: 2rem;}
-.card { background:#161b22; padding:3rem 2rem; border-radius:12px; box-shadow:0 0 20px rgba(0,0,0,0.4); max-width:500px; width:90%; opacity:0; transform:translateY(30px); animation:fadeIn 1s forwards;}
-h1 { margin-bottom:1rem; font-size:2.5rem; color:#79c0ff;}
-h3 { margin-top:0; font-weight:normal; color:#c9d1d9;}
-.btn { margin-top:1.5rem; display:inline-block; background:#238636; color:#fff; padding:0.8rem 1.5rem; border-radius:8px; font-weight:bold; text-decoration:none; transition:0.3s; }
-.btn:hover { background:#2ea043; }
-@keyframes fadeIn { to { opacity:1; transform:translateY(0); } }
+body {
+    background:black;
+    color:white;
+    font-family:'Segoe UI', sans-serif;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    min-height:100vh;
+    margin:0;
+    text-align:center;
+}
+h1 {font-size:3rem; margin:0.5rem;}
+h3 {font-weight:normal; color:#aaa;}
+.nav {margin-top:2rem;}
+.nav a {
+    color:#79c0ff;
+    margin:0 10px;
+    text-decoration:none;
+    font-weight:bold;
+}
+.nav a:hover{text-decoration:underline;}
 </style>
 </head>
 <body>
-<div class="nav">
-    <a href="index.html">Главная</a> |
-    <a href="upload.html">Загрузить</a> |
-    <a href="view.html">Просмотр файлов</a>
-</div>
 <main>
-    <div class="card">
+    <div class="name">
         <h1>Бомондъ.рф</h1>
+    </div>
+    <div class="slogan">
         <h3>Больше, чем общество</h3>
-        <a href="upload.html" class="btn">Перейти к загрузке</a>
-        <a href="view.html" class="btn">Просмотреть файлы</a>
+    </div>
+    <div class="nav">
+        <a href="view.html">Просмотр файлов</a> |
+        <a href="tree.html">Структура сервера</a>
     </div>
 </main>
 </body>
