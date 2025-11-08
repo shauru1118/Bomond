@@ -3,25 +3,24 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Структура сервера</title>
+<title>Файловая структура</title>
 <style>
-body { background:#0d1117; color:#e6edf3; font-family:'Segoe UI', sans-serif; padding:2rem; }
-.nav a { color:#79c0ff; margin:0 10px; text-decoration:none; font-weight:bold; }
-.nav a:hover { text-decoration:underline; }
-.card { background:#161b22; padding:1.5rem; border-radius:12px; box-shadow:0 0 20px rgba(0,0,0,0.4); opacity:0; transform:translateY(30px); animation:fadeIn 1s forwards; max-width:900px; margin:auto; }
-#tree { margin-top:1rem; font-family:monospace; line-height:1.6; }
-.folder { font-weight:bold; cursor:pointer; color:#79c0ff; }
-.file a { color:#c9d1d9; text-decoration:none; }
-.file a:hover { text-decoration:underline; }
-ul { list-style:none; margin:0; padding-left:1rem; border-left:1px dashed #30363d; }
-li { margin:0.2rem 0; }
-button { margin-left:5px; padding:2px 5px; font-size:0.8rem; cursor:pointer; border-radius:4px; border:none; background:#238636; color:white; }
-button:hover { background:#2ea043; }
-@keyframes fadeIn { to { opacity:1; transform:translateY(0); } }
+body {background:#0d1117; color:#e6edf3; font-family:'Segoe UI', sans-serif; padding:2rem;}
+.nav a {color:#79c0ff; margin:0 10px; text-decoration:none; font-weight:bold;}
+.nav a:hover{text-decoration:underline;}
+.card{background:#161b22; padding:1.5rem; border-radius:12px; box-shadow:0 0 20px rgba(0,0,0,0.4); opacity:0; transform:translateY(30px); animation:fadeIn 1s forwards; max-width:900px; margin:auto;}
+#tree{margin-top:1rem; font-family:monospace; line-height:1.6;}
+ul{list-style:none; margin:0; padding-left:1rem; border-left:1px dashed #30363d;}
+li{margin:0.2rem 0;}
+.folder{font-weight:bold; cursor:pointer; color:#79c0ff;}
+.file a{color:#c9d1d9; text-decoration:none;}
+.file a:hover{text-decoration:underline;}
+button.icon{margin-left:5px; padding:0 5px; font-size:1rem; cursor:pointer; border-radius:4px; border:none; background:#238636; color:white;}
+button.icon:hover{background:#2ea043;}
+@keyframes fadeIn{to{opacity:1; transform:translateY(0);}}
 </style>
 </head>
 <body>
-
 <div class="nav">
   <a href="index.html">Главная</a> |
   <a href="upload.html">Загрузить</a> |
@@ -35,73 +34,80 @@ button:hover { background:#2ea043; }
 </div>
 
 <input type="file" id="fileInput" style="display:none">
-
 <script>
 const API = 'https://bomond.pythonanywhere.com';
 const fileInput = document.getElementById('fileInput');
 
-async function loadTree() {
+async function loadTree(){
     const treeDiv = document.getElementById('tree');
-    try {
+    try{
         const res = await fetch(`${API}/tree`);
         const data = await res.json();
-        treeDiv.innerHTML = renderTree(data, '');
-    } catch(e){
-        treeDiv.textContent = 'Ошибка загрузки: ' + e;
-    }
+        treeDiv.innerHTML = renderTree(data,'');
+    }catch(e){treeDiv.textContent='Ошибка: '+e;}
 }
 
-function renderTree(node, path) {
+function renderTree(node,path){
     if(!node.children) return '';
-    let html = '<ul>';
+    let html='<ul>';
     for(const child of node.children){
         const childPath = path ? path+'/'+child.name : child.name;
-        if(child.type === 'folder'){
-            html += `<li>
-                        <span class="folder" onclick="toggle(this)">📁 ${child.name}</span>
-                        <button onclick="addFile('${childPath}')">Добавить файл</button>
-                        <button onclick="addFolder('${childPath}')">Новая папка</button>
-                        ${renderTree(child, childPath)}
-                     </li>`;
-        } else {
-            const url = `${API}${child.url}`;
-            html += `<li class="file">📄 <a href="${url}" download>${child.name}</a></li>`;
+        if(child.type==='folder'){
+            html+=`<li>
+                <span class="folder" onclick="toggle(this)">📁 ${child.name}</span>
+                <button class="icon" title="Добавить файл" onclick="addFile('${childPath}',event)">📎</button>
+                <button class="icon" title="Новая папка" onclick="addFolder('${childPath}',event)">📂+</button>
+                <button class="icon" title="Удалить" onclick="deleteItem('${childPath}',event)">🗑️</button>
+                ${renderTree(child,childPath)}
+            </li>`;
+        }else{
+            const url=`${API}/files/${childPath}`;
+            html+=`<li class="file">📄 <a href="${url}" download>${child.name}</a>
+            <button class="icon" title="Удалить" onclick="deleteItem('${childPath}',event)">🗑️</button></li>`;
         }
     }
-    html += '</ul>';
+    html+='</ul>';
     return html;
 }
 
 function toggle(el){
-    const next = el.nextElementSibling;
+    const next=el.nextElementSibling;
     if(next && next.tagName==='UL') next.style.display = next.style.display==='none'?'block':'none';
 }
 
-function addFolder(folderPath){
+function addFolder(folderPath,event){
+    event.stopPropagation();
     const name = prompt("Введите имя новой папки:");
     if(!name) return;
-    fetch(`${API}/mkdir`, {
+    fetch(`${API}/mkdir`,{
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({path: folderPath, name})
-    }).then(r => {
-        if(r.ok) loadTree();
-        else alert("Ошибка создания папки");
-    });
+        body: JSON.stringify({path:folderPath,name})
+    }).then(r=>{if(r.ok) loadTree(); else alert("Ошибка создания папки");});
 }
 
-function addFile(folderPath){
-    fileInput.onchange = async () => {
-        const file = fileInput.files[0];
+function addFile(folderPath,event){
+    event.stopPropagation();
+    fileInput.onchange=async ()=>{
+        const file=fileInput.files[0];
         if(!file) return;
-        const formData = new FormData();
-        formData.append('to_upload', file);
-        formData.append('folder', folderPath);
-        const res = await fetch(`${API}/upload_to_folder`, {method:'POST', body:formData});
-        if(res.ok) loadTree();
-        else alert("Ошибка загрузки файла");
+        const formData=new FormData();
+        formData.append('to_upload',file);
+        formData.append('folder',folderPath);
+        const res=await fetch(`${API}/upload_to_folder`,{method:'POST',body:formData});
+        if(res.ok) loadTree(); else alert("Ошибка загрузки файла");
     };
     fileInput.click();
+}
+
+function deleteItem(path,event){
+    event.stopPropagation();
+    if(!confirm("Вы уверены, что хотите удалить?")) return;
+    fetch(`${API}/delete`,{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({path})
+    }).then(r=>{if(r.ok) loadTree(); else alert("Ошибка удаления");});
 }
 
 loadTree();
