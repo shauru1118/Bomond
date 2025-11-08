@@ -30,8 +30,12 @@ button.icon:hover{background:#2ea043;}
 </div>
 
 <div class="card">
-  <h2>Структура файлов на сервере</h2>
+  <h2>Файлы сервера</h2>
   <div id="tree">Загрузка...</div>
+  <div style="margin-top:1rem;">
+      <button class="icon" onclick="addFolder('',event)">📂+ Создать папку</button>
+      <button class="icon" onclick="addFile('',event)">📎 Добавить файл</button>
+  </div>
 </div>
 
 <input type="file" id="fileInput" style="display:none">
@@ -45,12 +49,15 @@ async function loadTree(){
     try{
         const res = await fetch(`${API}/tree`);
         const data = await res.json();
-        treeDiv.innerHTML = renderTree(data,'');
+        // Сразу отображаем содержимое папки upload
+        const root = data; // верхний уровень — upload
+        treeDiv.innerHTML = renderTree(root,'');
     }catch(e){treeDiv.textContent='Ошибка: '+e;}
 }
 
+// Рекурсивная отрисовка дерева
 function renderTree(node,path){
-    if(!node.children) return '';
+    if(!node.children || node.children.length===0) return '';
     let html='<ul>';
     for(const child of node.children){
         const childPath = path ? path+'/'+child.name : child.name;
@@ -81,13 +88,13 @@ function addFolder(folderPath,event){
     event.stopPropagation();
     const name = prompt("Введите имя новой папки:");
     if(!name) return;
-    const pathToSend = folderPath || ''; // пустой путь = корень upload
+    const pathToSend = folderPath || ''; // пустой путь = верхний уровень
     fetch(`${API}/mkdir`,{
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body: JSON.stringify({path:pathToSend,name})
     }).then(r=>{
-        if(r.ok) loadTree(); else alert("Ошибка создания папки");
+        if(r.ok) loadTree(); else alert(`Ошибка создания папки ${r.body}`);
     });
 }
 
