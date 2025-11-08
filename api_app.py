@@ -56,7 +56,7 @@ def get_files():
             files.append({"type": "file", "name": name, "url": f"/files/{date}/{subject}/{name}"})
     return flask.jsonify(files)
 
-@app.route("/files/<date>/<subject>/<filename>")
+@app.route("/upload/<date>/<subject>/<filename>")
 def serve_file(date, subject, filename):
     return flask.send_from_directory(os.path.join(UPLOAD_DIR, date, subject), filename)
 
