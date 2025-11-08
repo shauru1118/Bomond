@@ -82,6 +82,30 @@ def get_tree():
     tree = build_tree(UPLOAD_DIR)
     return flask.jsonify(tree)
 
+@app.route("/mkdir", methods=["POST"])
+def mkdir():
+    data = flask.request.get_json()
+    path = data.get("path")
+    name = data.get("name")
+    if not path or not name:
+        return "missing path or name", 400
+    folder_path = os.path.join(UPLOAD_DIR, path, name)
+    try:
+        os.makedirs(folder_path, exist_ok=False)
+    except FileExistsError:
+        return "folder exists", 400
+    return "folder created", 200
+
+@app.route("/upload_to_folder", methods=["POST"])
+def upload_to_folder():
+    folder = flask.request.form.get("folder")
+    if "to_upload" not in flask.request.files or not folder:
+        return "missing file or folder", 400
+    file = flask.request.files["to_upload"]
+    os.makedirs(os.path.join(UPLOAD_DIR, folder), exist_ok=True)
+    file.save(os.path.join(UPLOAD_DIR, folder, file.filename))
+    return "file uploaded", 200
+
 
 if __name__ == "__main__":
     app.run("0.0.0.0", 5000, debug=True)
