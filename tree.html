@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Файловая структура</title>
+<title>Структура сервера</title>
 <style>
 body {background:#0d1117; color:#e6edf3; font-family:'Segoe UI', sans-serif; padding:2rem;}
 .nav a {color:#79c0ff; margin:0 10px; text-decoration:none; font-weight:bold;}
 .nav a:hover{text-decoration:underline;}
-.card{background:#161b22; padding:1.5rem; border-radius:12px; box-shadow:0 0 20px rgba(0,0,0,0.4); opacity:0; transform:translateY(30px); animation:fadeIn 1s forwards; max-width:900px; margin: 2rem;}
+.card{background:#161b22; padding:1.5rem; border-radius:12px; box-shadow:0 0 20px rgba(0,0,0,0.4); opacity:0; transform:translateY(30px); animation:fadeIn 1s forwards; max-width:900px; margin:2rem;}
 #tree{margin-top:1rem; font-family:monospace; line-height:1.6;}
 ul{list-style:none; margin:0; padding-left:1rem; border-left:1px dashed #30363d;}
 li{margin:0.2rem 0;}
@@ -21,6 +21,7 @@ button.icon:hover{background:#2ea043;}
 </style>
 </head>
 <body>
+
 <div class="nav">
   <a href="index.html">Главная</a> |
   <a href="upload.html">Загрузить</a> |
@@ -34,6 +35,7 @@ button.icon:hover{background:#2ea043;}
 </div>
 
 <input type="file" id="fileInput" style="display:none">
+
 <script>
 const API = 'https://bomond.pythonanywhere.com';
 const fileInput = document.getElementById('fileInput');
@@ -79,11 +81,14 @@ function addFolder(folderPath,event){
     event.stopPropagation();
     const name = prompt("Введите имя новой папки:");
     if(!name) return;
+    const pathToSend = folderPath || ''; // пустой путь = корень upload
     fetch(`${API}/mkdir`,{
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({path:folderPath,name})
-    }).then(r=>{if(r.ok) loadTree(); else alert("Ошибка создания папки");});
+        body: JSON.stringify({path:pathToSend,name})
+    }).then(r=>{
+        if(r.ok) loadTree(); else alert("Ошибка создания папки");
+    });
 }
 
 function addFile(folderPath,event){
