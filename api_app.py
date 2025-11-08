@@ -73,7 +73,7 @@ def get_tree():
                     result["children"].append({
                         "name": item,
                         "type": "file",
-                        "url": full.replace(os.getcwd(), "").replace("\\", "/")
+                        "url": "/" + full.replace(os.getcwd(), "").replace("\\", "/")
                     })
         except Exception:
             pass
