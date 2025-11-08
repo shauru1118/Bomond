@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Файловая структура</title>
+<style>
+body { background:#0d1117; color:#e6edf3; font-family:'Segoe UI', sans-serif; padding:2rem; }
+.nav a { color:#79c0ff; margin:0 10px; text-decoration:none; font-weight:bold; }
+.nav a:hover { text-decoration:underline; }
+#tree { margin-top:2rem; font-family:monospace; line-height:1.6; }
+.folder { font-weight:bold; cursor:pointer; color:#79c0ff; }
+.file a { color:#c9d1d9; text-decoration:none; }
+.file a:hover { text-decoration:underline; }
+ul { list-style:none; margin:0; padding-left:1rem; border-left:1px dashed #30363d; }
+li { margin:0.2rem 0; }
+.card { background:#161b22; padding:1.5rem; border-radius:12px; box-shadow:0 0 20px rgba(0,0,0,0.4); opacity:0; transform:translateY(30px); animation:fadeIn 1s forwards; max-width:900px; margin:auto; }
+@keyframes fadeIn { to { opacity:1; transform:translateY(0); } }
+</style>
+</head>
+<body>
+<div class="nav">
+  <a href="index.html">Главная</a> |
+  <a href="upload.html">Загрузить</a> |
+  <a href="view.html">Просмотр файлов</a> |
+  <a href="tree.html">Структура сервера</a>
+</div>
+
+<div class="card">
+  <h2>Структура файлов на сервере</h2>
+  <div id="tree">Загрузка...</div>
+</div>
+
+<script>
+const API = 'http://127.0.0.1:5000';
+
+async function loadTree() {
+  const treeDiv = document.getElementById('tree');
+  try {
+    const res = await fetch(`${API}/tree`);
+    const data = await res.json();
+    treeDiv.innerHTML = renderTree(data);
+  } catch(e){
+    treeDiv.textContent = 'Ошибка загрузки: ' + e;
+  }
+}
+
+function renderTree(node) {
+  if(!node.children) return '';
+  let html = '<ul>';
+  for(const child of node.children){
+    if(child.type === 'folder'){
+      html += `<li><span class="folder" onclick="toggle(this)">📁 ${child.name}</span>${renderTree(child)}</li>`;
+    } else {
+      const url = `${API}${child.url}`;
+      html += `<li class="file">📄 <a href="${url}" download>${child.name}</a></li>`;
+    }
+  }
+  html += '</ul>';
+  return html;
+}
+
+function toggle(el){
+  const next = el.nextElementSibling;
+  if(next && next.tagName === 'UL') next.style.display = next.style.display === 'none' ? 'block' : 'none';
+}
+
+loadTree();
+</script>
+</body>
+</html>
